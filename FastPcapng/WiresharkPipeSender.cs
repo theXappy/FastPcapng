@@ -1,16 +1,21 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.IO.Pipes;
+using System.Threading.Tasks;
 
 namespace FastPcapng
 {
     public class WiresharkPipeSender
     {
-        public void SendPcapng(string pipeName, MemoryPcapng pcapng)
+        public Task SendPcapngAsync(string pipeName, MemoryPcapng pcapng)
         {
-            NamedPipeServerStream toWireshark = new NamedPipeServerStream(pipeName, PipeDirection.Out, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
-            toWireshark.WaitForConnection();
-            pcapng.WriteTo(toWireshark);
-            toWireshark.Close();
+            return Task.Run((Action)(() =>
+            {
+                NamedPipeServerStream toWireshark = new NamedPipeServerStream(pipeName, PipeDirection.Out, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+                toWireshark.WaitForConnection();
+                pcapng.WriteTo(toWireshark);
+                toWireshark.Close();
+            }));
         }
 
         public void SendPcapng(string pipeName, byte[] pcapngBytes)
