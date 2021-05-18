@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Haukcode.PcapngUtils" Version="1.2.74" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FastPcapng.DataBending\FastPcapng.DataBending.csproj" />
+  </ItemGroup>
+
+</Project>
