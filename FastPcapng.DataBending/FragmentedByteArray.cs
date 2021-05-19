@@ -11,21 +11,21 @@ namespace FastPcapng.DataBending
 {
     public class FragmentedByteArray : IEnumerable<byte>
     {
-        public List<FlexyByteArray> Frags = new();
+        public List<Memory<byte>> Frags = new();
         public int Length => Frags.Sum(frag => frag.Length);
 
         public FragmentedByteArray(byte[] arr)
         {
-            Frags.Add(new FlexyByteArray(arr));
+            Frags.Add(new Memory<byte>(arr));
         }
         public void Append(byte[] data)
         {
-            Frags.Add(new FlexyByteArray(data));
+            Frags.Insert(Frags.Count, new Memory<byte>(data));
         }
 
         public void Prepend(byte[] data)
         {
-            Frags.Insert(0, new FlexyByteArray(data));
+            Frags.Insert(0, new Memory<byte>(data));
         }
 
         public void Insert(int offset, byte[] data)
@@ -39,18 +39,18 @@ namespace FastPcapng.DataBending
 
                 if (offset == currBlockStartOffset) {
                     // Inserting BEFORE current block (might happen only for first block?)
-                    Frags.Insert(i, new FlexyByteArray(data));
+                    Frags.Insert(i, new Memory<byte>(data));
                     return;
                 }
                 if (offset > currBlockStartOffset && offset < currBlockEndOffset) {
                     // Inserting in the MIDDLE of the current block. Split required.
-                    FlexyByteArray currFrag = Frags[i];
-                    FlexyByteArray firstHalf = currFrag.CutTo(offset - currBlockStartOffset);
-                    FlexyByteArray secondHalf = currFrag.CutFrom(offset - currBlockStartOffset);
+                    Memory<byte> currFrag = Frags[i];
+                    Memory<byte> firstHalf = currFrag[..(offset - currBlockStartOffset)];
+                    Memory<byte> secondHalf = currFrag[(offset - currBlockStartOffset)..];
 
                     // Add "sandwich" of split halfs and the data to insert
                     Frags.Insert(i, secondHalf);
-                    Frags.Insert(i, new FlexyByteArray(data));
+                    Frags.Insert(i, new Memory<byte>(data));
                     Frags.Insert(i, firstHalf);
 
                     // Remove instance of broken-down block that we just split
@@ -60,7 +60,7 @@ namespace FastPcapng.DataBending
                 }
                 if (offset == currBlockEndOffset) {
                     // Inserting AFTER current block
-                    Frags.Insert(i + 1, new FlexyByteArray(data));
+                    Frags.Insert(i + 1, new Memory<byte>(data));
                     return;
                 }
             }
@@ -82,9 +82,9 @@ namespace FastPcapng.DataBending
             int currBlockStartOffset;
             int currBlockEndOffset = 0;
 
-            List<FlexyByteArray> fragsToRemoveList = new List<FlexyByteArray>();
+            List<Memory<byte>> fragsToRemoveList = new();
             for (var i = 0; i < Frags.Count; i++) {
-                FlexyByteArray currFrag = Frags[i];
+                Memory<byte> currFrag = Frags[i];
                 currBlockStartOffset = currBlockEndOffset;
                 currBlockEndOffset = currBlockStartOffset + Frags[i].Length;
 
@@ -93,8 +93,7 @@ namespace FastPcapng.DataBending
                     if (amount < currFrag.Length) {
                         // Also end of deletion is within current frag (but it's not ALL of the frag)
                         // So let's just advance the start
-                        currFrag.Start += amount;
-                        currFrag.Length -= amount;
+                        currFrag = currFrag.Slice(amount);
                         Frags[i] = currFrag; // Immutable bullsh*t
                         break;
                     }
@@ -116,8 +115,8 @@ namespace FastPcapng.DataBending
                 }
                 if (offset > currBlockStartOffset && offset < currBlockEndOffset) {
                     // Removing from the middle of this frag. So a split must happen
-                    FlexyByteArray firstHalf = currFrag.CutTo(offset - currBlockStartOffset);
-                    FlexyByteArray secondHalf = currFrag.CutFrom(offset - currBlockStartOffset);
+                    Memory<byte> firstHalf = currFrag[..(offset - currBlockStartOffset)];
+                    Memory<byte> secondHalf = currFrag[(offset - currBlockStartOffset)..];
 
                     // Add "sandwich" of split halfs and the data to insert
                     Frags.Insert(i, secondHalf);
@@ -155,8 +154,8 @@ namespace FastPcapng.DataBending
 
         public void CopyTo(Stream s)
         {
-            foreach (FlexyByteArray fba in Frags) {
-                fba.CopyTo(s);
+            foreach (Memory<byte> fba in Frags) {
+                s.Write(fba.Span);
             }
         }
 
@@ -165,7 +164,7 @@ namespace FastPcapng.DataBending
         {
             int offset = 0;
             int taken = 0;
-            foreach (FlexyByteArray fba in Frags)
+            foreach (Memory<byte> fba in Frags)
             {
                 if (offset + fba.Length > sourceOffset)
                 {
@@ -179,7 +178,7 @@ namespace FastPcapng.DataBending
                     int availableInFrag = fba.Length - fragSourceOffset;
 
                     int numToTake = Math.Min(amountLeftToCopy, availableInFrag);
-                    fba.CopyTo(fragSourceOffset, b, dstOffset, numToTake);
+                    fba.Slice(fragSourceOffset, numToTake).CopyTo(new Memory<byte>(b, dstOffset, numToTake));
                     dstOffset += numToTake;
                     taken += numToTake;
                     if (taken == length)
@@ -202,8 +201,8 @@ namespace FastPcapng.DataBending
         {
             byte[] output = new byte[Length];
             int offset = 0;
-            foreach (FlexyByteArray frag in Frags) {
-                frag.CopyTo(output, offset, frag.Length);
+            foreach (Memory<byte> frag in Frags) {
+                frag.Span.CopyTo(output.AsSpan(offset, frag.Length));
                 offset += frag.Length;
             }
 
@@ -221,7 +220,7 @@ namespace FastPcapng.DataBending
                     var currBlockStartOffset = currBlockEndOffset;
                     currBlockEndOffset = currBlockStartOffset + Frags[j].Length;
                     if (i >= currBlockStartOffset && i < currBlockEndOffset) {
-                        return Frags[j][i - currBlockStartOffset];
+                        return Frags[j].Span[i - currBlockStartOffset];
                     }
                 }
 
@@ -238,8 +237,8 @@ namespace FastPcapng.DataBending
                     {
                         // Stuff is immutable so I can't edit the FlxyByteArray itself but editing it's underlying 
                         // array does the trick
-                        FlexyByteArray fba = Frags[j];
-                        fba[i - currBlockStartOffset] = value;
+                        Memory<byte> fba = Frags[j];
+                        fba.Span[i - currBlockStartOffset] = value;
                         return;
                     }
                 }
@@ -252,54 +251,16 @@ namespace FastPcapng.DataBending
 
         #region IEnumerable Impl
 
-        public class FragmentedByteArrayEnumerator : IEnumerator<byte>
+        public IEnumerator<byte> GetEnumerator()
         {
-            private FragmentedByteArray _ba;
-            private IEnumerator<FlexyByteArray> _fragsEnumerator = null;
-            private IEnumerator<byte> _currFragEnumerator = null;
-
-            public FragmentedByteArrayEnumerator(FragmentedByteArray ba)
+            foreach(Memory<byte> frag in Frags)
             {
-                _ba = ba;
-                _fragsEnumerator = _ba.Frags.GetEnumerator();
-                _fragsEnumerator.MoveNext();
-                _currFragEnumerator = _fragsEnumerator.Current.GetEnumerator();
-            }
-
-            public bool MoveNext()
-            {
-                if (_currFragEnumerator.MoveNext()) {
-                    return true;
+                for(int i=0;i<frag.Length;i++)
+                {
+                    yield return frag.Span[i];
                 }
-                // Out of bytes in curr frag enumerator
-                if (_fragsEnumerator.MoveNext()) {
-                    // Got a new frag, starting getting bytes from it.
-                    _currFragEnumerator = _fragsEnumerator.Current.GetEnumerator();
-                    _currFragEnumerator.MoveNext();
-                    return true;
-                }
-                // Out of frags
-                return false;
-            }
-
-            public void Reset()
-            {
-                _fragsEnumerator?.Dispose();
-                _fragsEnumerator = _ba.Frags.GetEnumerator();
-                _fragsEnumerator.MoveNext();
-                _currFragEnumerator = _fragsEnumerator.Current.GetEnumerator();
-            }
-
-            public byte Current => (byte)_currFragEnumerator.Current;
-
-            object IEnumerator.Current => Current;
-
-            public void Dispose()
-            {
-                _fragsEnumerator?.Dispose();
             }
         }
-        public IEnumerator<byte> GetEnumerator() => new FragmentedByteArrayEnumerator(this);
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         #endregion
@@ -340,7 +301,7 @@ namespace FastPcapng.DataBending
             if (TryGetExactFrag(offset1, len1, out int fragIndex1) &&
                 TryGetExactFrag(offset2, len2, out int fragIndex2))
             {
-                FlexyByteArray frag1 = Frags[fragIndex1];
+                Memory<byte> frag1 = Frags[fragIndex1];
                 Frags[fragIndex1] = Frags[fragIndex2];
                 Frags[fragIndex2] = frag1;
                 return;
