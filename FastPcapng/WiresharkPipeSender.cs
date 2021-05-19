@@ -1,6 +1,8 @@
-using System;
+﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace FastPcapng
@@ -12,8 +14,16 @@ namespace FastPcapng
             return Task.Run((Action)(() =>
             {
                 NamedPipeServerStream toWireshark = new NamedPipeServerStream(pipeName, PipeDirection.Out, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+                Debug.WriteLine(" &&& NamedPipe Waiting for connection");
                 toWireshark.WaitForConnection();
+                Debug.WriteLine(" &&& NamedPipe Connected! Writing data");
                 pcapng.WriteTo(toWireshark);
+                Debug.WriteLine(" &&& NamedPipe Wrote Data! Sleeping...");
+
+                Thread.Sleep(3_00);
+                Debug.WriteLine(" &&& NamedPipe Slept");
+                Debug.WriteLine(" &&& NamedPipe Closing");
+
                 toWireshark.Close();
                 toWireshark.Dispose();
             }));
