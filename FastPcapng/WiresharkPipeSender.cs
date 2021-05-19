@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.IO.Pipes;
 using System.Threading.Tasks;
@@ -15,6 +15,7 @@ namespace FastPcapng
                 toWireshark.WaitForConnection();
                 pcapng.WriteTo(toWireshark);
                 toWireshark.Close();
+                toWireshark.Dispose();
             }));
         }
 
