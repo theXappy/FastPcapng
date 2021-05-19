@@ -65,6 +65,13 @@ namespace FastPcapng.DataBending
                 }
             }
 
+            if(Frags.Count == 0)
+            {
+                // FBA is empty, just add as first block
+                Append(data);
+                return;
+            }
+
             throw new ArgumentException(
                 $"Bad arguments to {nameof(FragmentedByteArray)}.{nameof(Insert)}(). i: {offset}, Total Length: {Length}");
         }
