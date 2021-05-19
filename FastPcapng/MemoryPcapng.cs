@@ -1,7 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using FastPcapng.Internal;
+using Haukcode.PcapngUtils.Common;
 using Haukcode.PcapngUtils.PcapNG.BlockTypes;
+using Haukcode.PcapngUtils.PcapNG.CommonTypes;
+using Haukcode.PcapngUtils.PcapNG.OptionTypes;
 
 namespace FastPcapng
 {
@@ -17,6 +20,25 @@ namespace FastPcapng
 
         public List<InterfaceDescriptionBlock> Interfaces => _interfaceDescriptionBlocks;
 
+        public MemoryPcapng()
+        {
+            _reverseByteOrder = false;
+
+            var secHeaderBlock = new SectionHeaderBlock(SectionHeaderBlock.MagicNumbers.Identical, 1, 0, -1,
+                new SectionHeaderOption());
+            _sectionHeader = secHeaderBlock.ConvertToByte(_reverseByteOrder, null);
+
+            _interfaceDescriptionBlocks = new List<InterfaceDescriptionBlock>()
+            {
+                new InterfaceDescriptionBlock(LinkTypes.Ethernet, 65535,
+                    new InterfaceDescriptionOption("Fake interface 0"))
+            };
+
+            EnhancedPacketBlock dummyPacket = new EnhancedPacketBlock(0, new TimestampHelper(0, 0), 1,
+                new byte[] {0x00}, new EnhancedPacketOption());
+            _enhancedPacketBlocksBytes = new EnhancedBlocksCollection(dummyPacket.ConvertToByte(_reverseByteOrder, null));
+        }
+
         public MemoryPcapng(byte[] sectionHeader, List<InterfaceDescriptionBlock> interfaceDescriptionBlocks, byte[] enhancedPacketBlocksBytes, bool reverseByteOrder)
         {
             _sectionHeader = sectionHeader;
@@ -29,6 +51,7 @@ namespace FastPcapng
         public void PrependPacket(EnhancedPacketBlock epb) => _enhancedPacketBlocksBytes.Prepend(epb);
         public void AppendPacket(EnhancedPacketBlock epb) => _enhancedPacketBlocksBytes.Append(epb);
         public void InsertPacket(int index, EnhancedPacketBlock epb) => _enhancedPacketBlocksBytes.Insert(index,epb);
+        public void UpdatePacket(int index, EnhancedPacketBlock epb) => _enhancedPacketBlocksBytes.Update(index, epb);
         public void SwapPackets(int index1, int index2) => _enhancedPacketBlocksBytes.Swap(index1, index2);
         public void MovePacket(int fromIndex, int toIndex)
         {
@@ -43,8 +66,8 @@ namespace FastPcapng
             }
             else
             {
-                _enhancedPacketBlocksBytes.InsertRaw(toIndex, block);
                 RemovePacket(fromIndex);
+                _enhancedPacketBlocksBytes.InsertRaw(toIndex, block);
             }
         }
         public EnhancedPacketBlock GetPacket(int index) => _enhancedPacketBlocksBytes.GetBlockParsed(index);
