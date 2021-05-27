@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="Haukcode.PcapngUtils" Version="1.2.74" />
+    <PackageReference Include="log4net" Version="2.0.12" />
   </ItemGroup>
 
   <ItemGroup>
