@@ -13,30 +13,29 @@ namespace FastPcapng
         {
             return Task.Run((Action)(() =>
             {
-                NamedPipeServerStream toWireshark = new NamedPipeServerStream(pipeName, PipeDirection.Out, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+                using NamedPipeServerStream toWireshark = new NamedPipeServerStream(pipeName, PipeDirection.Out, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
                 toWireshark.WaitForConnection();
-
                 pcapng.WriteTo(toWireshark);
                 toWireshark.Flush(); // Really important 
-
                 toWireshark.Close();
-                toWireshark.Dispose();
             }));
         }
 
         public void SendPcapng(string pipeName, byte[] pcapngBytes)
         {
-            NamedPipeServerStream toWireshark = new NamedPipeServerStream(pipeName, PipeDirection.Out, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+            using NamedPipeServerStream toWireshark = new NamedPipeServerStream(pipeName, PipeDirection.Out, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
             toWireshark.WaitForConnection();
             toWireshark.Write(pcapngBytes);
+            toWireshark.Flush();
             toWireshark.Close();
         }
 
         public void SendPcapng(string pipeName, Stream stream)
         {
-            NamedPipeServerStream toWireshark = new NamedPipeServerStream(pipeName, PipeDirection.Out, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+            using NamedPipeServerStream toWireshark = new NamedPipeServerStream(pipeName, PipeDirection.Out, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
             toWireshark.WaitForConnection();
             stream.CopyTo(toWireshark);
+            toWireshark.Flush();
             toWireshark.Close();
         }
     }
