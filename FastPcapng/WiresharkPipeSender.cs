@@ -15,8 +15,10 @@ namespace FastPcapng
             {
                 using NamedPipeServerStream toWireshark = new NamedPipeServerStream(pipeName, PipeDirection.Out, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
                 toWireshark.WaitForConnection();
+                Thread.Sleep(500);
                 pcapng.WriteTo(toWireshark);
                 toWireshark.Flush(); // Really important 
+                Thread.Sleep(500);
                 toWireshark.Close();
             }));
         }
