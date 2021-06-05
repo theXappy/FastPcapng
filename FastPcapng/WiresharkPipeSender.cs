@@ -17,8 +17,11 @@ namespace FastPcapng
                 toWireshark.WaitForConnection();
                 Thread.Sleep(500);
                 pcapng.WriteTo(toWireshark);
-                toWireshark.Flush(); // Really important 
-                Thread.Sleep(500);
+                for (int i = 0; i < 50; i++)
+                {
+                    toWireshark.Flush(); // Really important 
+                    Thread.Sleep(10);
+                }
                 toWireshark.Close();
             }));
         }
