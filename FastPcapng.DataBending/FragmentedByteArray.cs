@@ -348,8 +348,8 @@ namespace FastPcapng.DataBending
             }
 
             // Dump block's content to new arrays
-            byte[] earlyBlock = this[earlyOffset..earlyOffset + earlyLen];
-            byte[] laterBlock = this[laterOffset.. earlyOffset+laterLen];
+            byte[] earlyBlock = this[earlyOffset..(earlyOffset + earlyLen)];
+            byte[] laterBlock = this[laterOffset..(earlyOffset+laterLen)];
 
             // Swap the blocks. If the lengths match it's easier since the later offset doesn't move
             if (earlyLen == laterLen)
