@@ -13,9 +13,9 @@ namespace FastPcapng
         private byte[] _sectionHeader;
 
         private List<InterfaceDescriptionBlock> _interfaceDescriptionBlocks;
-        
+
         private EnhancedBlocksCollection _enhancedPacketBlocksBytes;
-        
+
         private bool _reverseByteOrder;
 
         public List<InterfaceDescriptionBlock> Interfaces => _interfaceDescriptionBlocks;
@@ -35,7 +35,7 @@ namespace FastPcapng
             };
 
             EnhancedPacketBlock dummyPacket = new EnhancedPacketBlock(0, new TimestampHelper(0, 0), 1,
-                new byte[] {0x00}, new EnhancedPacketOption());
+                new byte[] { 0x00 }, new EnhancedPacketOption());
             _enhancedPacketBlocksBytes = new EnhancedBlocksCollection(dummyPacket.ConvertToByte(_reverseByteOrder, null));
         }
 
@@ -46,29 +46,19 @@ namespace FastPcapng
             _enhancedPacketBlocksBytes = new EnhancedBlocksCollection(enhancedPacketBlocksBytes);
             _reverseByteOrder = reverseByteOrder;
         }
-        
+
         public void RemovePacket(int index) => _enhancedPacketBlocksBytes.Remove(index);
         public void PrependPacket(EnhancedPacketBlock epb) => _enhancedPacketBlocksBytes.Prepend(epb);
         public void AppendPacket(EnhancedPacketBlock epb) => _enhancedPacketBlocksBytes.Append(epb);
-        public void InsertPacket(int index, EnhancedPacketBlock epb) => _enhancedPacketBlocksBytes.Insert(index,epb);
+        public void InsertPacket(int index, EnhancedPacketBlock epb) => _enhancedPacketBlocksBytes.Insert(index, epb);
         public void UpdatePacket(int index, EnhancedPacketBlock epb) => _enhancedPacketBlocksBytes.Update(index, epb);
         public void SwapPackets(int index1, int index2) => _enhancedPacketBlocksBytes.Swap(index1, index2);
         public void MovePacket(int fromIndex, int toIndex)
         {
             var block = _enhancedPacketBlocksBytes.GetBlockRaw(fromIndex);
-            // Order of operations is crucial since removing from/inserting to the earlier offset 
-            // will decrease/increase the later index by 1.
-            // Doing so in the "right order" allows us to nelgect recalculating the later offset.
-            if(fromIndex > toIndex)
-            {
-                RemovePacket(fromIndex);
-                _enhancedPacketBlocksBytes.InsertRaw(toIndex, block);
-            }
-            else
-            {
-                RemovePacket(fromIndex);
-                _enhancedPacketBlocksBytes.InsertRaw(toIndex, block);
-            }
+
+            RemovePacket(fromIndex);
+            _enhancedPacketBlocksBytes.InsertRaw(toIndex, block);
         }
         public EnhancedPacketBlock GetPacket(int index) => _enhancedPacketBlocksBytes.GetBlockParsed(index);
 
@@ -77,7 +67,7 @@ namespace FastPcapng
             stream.Write(_sectionHeader);
             foreach (InterfaceDescriptionBlock iface in _interfaceDescriptionBlocks)
             {
-                stream.Write(iface.ConvertToByte(_reverseByteOrder,(ex)=>throw ex));
+                stream.Write(iface.ConvertToByte(_reverseByteOrder, (ex) => throw ex));
             }
             _enhancedPacketBlocksBytes.CopyTo(stream);
         }
