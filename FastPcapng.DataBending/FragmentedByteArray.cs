@@ -1,14 +1,15 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace FastPcapng.DataBending
 {
+    /// <summary>
+    /// Represents a byte array which is separated to one or more segments in memory
+    /// This should be more efficient implementation to a byte array when multiple resizing operations are expected (appending/prepending/insertion/deletion)
+    /// </summary>
     public class FragmentedByteArray : IEnumerable<byte>
     {
         public List<Memory<byte>> Frags = new();
@@ -30,7 +31,7 @@ namespace FastPcapng.DataBending
 
         public void Insert(int offset, byte[] data)
         {
-            // TODO: Could be faster if saving offsets with FlexyByteArrays
+            // TODO: Could be faster if saving offsets with Memory<T>s
             int currBlockStartOffset;
             int currBlockEndOffset = 0;
             for (var i = 0; i < Frags.Count; i++) {
@@ -78,7 +79,7 @@ namespace FastPcapng.DataBending
 
         public void Remove(int offset, int amount)
         {
-            // TODO: Could be faster if saving offsets with FlexyByteArrays
+            // TODO: Could be faster if saving offsets with Memory<T>s
             int currBlockStartOffset;
             int currBlockEndOffset = 0;
 
@@ -166,7 +167,9 @@ namespace FastPcapng.DataBending
             int taken = 0;
             foreach (Memory<byte> fba in Frags)
             {
-                if (offset + fba.Length > sourceOffset)
+                // Check if the start offset is within the current FBA's.
+                // Current FBA contains offsets in this range [offset, offset+fba.Length]
+                if (sourceOffset < offset + fba.Length)
                 {
                     int fragSourceOffset = 0;
                     if (sourceOffset > offset)
@@ -177,10 +180,13 @@ namespace FastPcapng.DataBending
                     int amountLeftToCopy = length - taken;
                     int availableInFrag = fba.Length - fragSourceOffset;
 
+                    // Take as much as possible from the current FBA, limited by the amount we still need (amountLeftToCopy)
                     int numToTake = Math.Min(amountLeftToCopy, availableInFrag);
                     fba.Slice(fragSourceOffset, numToTake).CopyTo(new Memory<byte>(b, dstOffset, numToTake));
                     dstOffset += numToTake;
                     taken += numToTake;
+
+                    // Check if we finished reading all data requested
                     if (taken == length)
                     {
                         return;
@@ -195,6 +201,21 @@ namespace FastPcapng.DataBending
             byte[] output = new byte[length];
             CopyTo(start, output, 0, length);
             return output;
+        }
+
+        public byte[] this[Range r]
+        {
+            get
+            {
+                int startOffset = r.Start.Value;
+                if (r.Start.IsFromEnd) startOffset = Length - startOffset;
+                int endOffset = r.End.Value;
+                if (r.End.IsFromEnd) endOffset = Length - endOffset;
+
+                byte[] output = new byte[endOffset - startOffset];
+                CopyTo(startOffset, output, 0, endOffset - startOffset);
+                return output;
+            }
         }
 
         public byte[] ToArray()
@@ -327,8 +348,8 @@ namespace FastPcapng.DataBending
             }
 
             // Dump block's content to new arrays
-            byte[] earlyBlock = GetSubArray(earlyOffset, earlyLen);
-            byte[] laterBlock = GetSubArray(laterOffset, laterLen);
+            byte[] earlyBlock = this[earlyOffset..earlyOffset + earlyLen];
+            byte[] laterBlock = this[laterOffset.. earlyOffset+laterLen];
 
             // Swap the blocks. If the lengths match it's easier since the later offset doesn't move
             if (earlyLen == laterLen)

@@ -9,6 +9,9 @@ using log4net.Util;
 
 namespace FastPcapng.Internal
 {
+    /// <summary>
+    /// A collection of Enhanced Packet Blocks
+    /// </summary>
     public class EnhancedBlocksCollection
     {
         private ILog _logger = LogManager.GetLogger(typeof(EnhancedBlocksCollection));

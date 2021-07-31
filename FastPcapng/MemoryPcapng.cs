@@ -8,6 +8,10 @@ using Haukcode.PcapngUtils.PcapNG.OptionTypes;
 
 namespace FastPcapng
 {
+    /// <summary>
+    /// Represents a complete pcapng file in memory
+    /// No file operations occur when modifying an instance of this class
+    /// </summary>
     public class MemoryPcapng
     {
         private byte[] _sectionHeader;
@@ -18,6 +22,9 @@ namespace FastPcapng
 
         private bool _reverseByteOrder;
 
+        /// <summary>
+        /// List of network interfaces in the capture
+        /// </summary>
         public List<InterfaceDescriptionBlock> Interfaces => _interfaceDescriptionBlocks;
 
         public MemoryPcapng()
@@ -47,12 +54,44 @@ namespace FastPcapng
             _reverseByteOrder = reverseByteOrder;
         }
 
+        /// <summary>
+        /// Remove a packet from the capture
+        /// </summary>
+        /// <param name="index">0-based index of the packet in the packets list</param>
         public void RemovePacket(int index) => _enhancedPacketBlocksBytes.Remove(index);
+        /// <summary>
+        /// Add a packet to the beginning of the capture
+        /// </summary>
+        /// <param name="epb">Packet structure</param>
         public void PrependPacket(EnhancedPacketBlock epb) => _enhancedPacketBlocksBytes.Prepend(epb);
+        /// <summary>
+        /// Addes a packet to the end of the capture
+        /// </summary>
+        /// <param name="epb">Packet structure</param>
         public void AppendPacket(EnhancedPacketBlock epb) => _enhancedPacketBlocksBytes.Append(epb);
+        /// <summary>
+        /// Insert a packet in a specific location of the packets list
+        /// </summary>
+        /// <param name="index">0-based index to insert into</param>
+        /// <param name="epb">Packet structure</param>
         public void InsertPacket(int index, EnhancedPacketBlock epb) => _enhancedPacketBlocksBytes.Insert(index, epb);
+        /// <summary>
+        /// Overwrite a packet at a specific location of the packets list
+        /// </summary>
+        /// <param name="index">0-based index to insert into</param>
+        /// <param name="epb">Replacement packet structure</param>
         public void UpdatePacket(int index, EnhancedPacketBlock epb) => _enhancedPacketBlocksBytes.Update(index, epb);
+        /// <summary>
+        /// Swap two packets within the packets list 
+        /// </summary>
+        /// <param name="index1">Index of first packet</param>
+        /// <param name="index2">Index of second packet</param>
         public void SwapPackets(int index1, int index2) => _enhancedPacketBlocksBytes.Swap(index1, index2);
+        /// <summary>
+        /// Move a packet eithin the packets list
+        /// </summary>
+        /// <param name="fromIndex">Index of the packet to move</param>
+        /// <param name="toIndex">New index for the packet</param>
         public void MovePacket(int fromIndex, int toIndex)
         {
             var block = _enhancedPacketBlocksBytes.GetBlockRaw(fromIndex);
@@ -60,8 +99,18 @@ namespace FastPcapng
             RemovePacket(fromIndex);
             _enhancedPacketBlocksBytes.InsertRaw(toIndex, block);
         }
+        /// <summary>
+        /// Read a packet from the packets list.
+        /// The returned object contains a copy of the data and modifying it doesn't not modify the packet in the capture.
+        /// </summary>
+        /// <param name="index">Index of the packet to read</param>
+        /// <returns>Parsed packet block with a copy of the packet's data. Modifying this object doesn't affect the original data in the capture.</returns>
         public EnhancedPacketBlock GetPacket(int index) => _enhancedPacketBlocksBytes.GetBlockParsed(index);
 
+        /// <summary>
+        /// Write the complete pcapng file to an output stream
+        /// </summary>
+        /// <param name="stream">Stream to write to</param>
         public void WriteTo(Stream stream)
         {
             stream.Write(_sectionHeader);
@@ -72,6 +121,12 @@ namespace FastPcapng
             _enhancedPacketBlocksBytes.CopyTo(stream);
         }
 
+        /// <summary>
+        /// Parse a pcapng file from an input stream
+        /// </summary>
+        /// <param name="stream">Input stream</param>
+        /// <param name="reverseByteOrder">Byte order</param>
+        /// <returns>In-memory copy of the pcapng read from the stream</returns>
         public static MemoryPcapng ParsePcapng(Stream stream, bool reverseByteOrder = false)
         {
             using BinaryReader binReader = new BinaryReader(stream);
@@ -99,6 +154,12 @@ namespace FastPcapng
             return new MemoryPcapng(sectionHeader, interfaces, packets, reverseByteOrder);
         }
 
+        /// <summary>
+        /// Parses a pcapng from a file
+        /// </summary>
+        /// <param name="path">Pcapng file path</param>
+        /// <param name="reverseByteOrder">Byte order</param>
+        /// <returns>In-memory copy of the pcapng in the file</returns>
         public static MemoryPcapng ParsePcapng(string path, bool reverseByteOrder = false)
         {
             using FileStream stream = File.OpenRead(path);

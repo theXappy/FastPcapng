@@ -17,6 +17,7 @@ namespace FastPcapng.Internal
 
         public List<long> ReadEpbOffsets(byte[] arr)
         {
+            // TODO: Is wrapping in a stream efficent? We call this class 'Fast' but this seems wasteful
             using MemoryStream memStream = new MemoryStream(arr, false);
             return ReadEpbOffsets(memStream);
         }
