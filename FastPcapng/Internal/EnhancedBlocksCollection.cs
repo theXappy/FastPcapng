@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
-using System.Runtime.CompilerServices;
 using FastPcapng.DataBending;
 using Haukcode.PcapngUtils.PcapNG.BlockTypes;
 using log4net;
@@ -200,30 +198,30 @@ namespace FastPcapng.Internal
 
         public void CopyTo(Stream s)
         {
-            Console.WriteLine("CopyTo Invoked.");
+            _logger.DebugExt(()=>"CopyTo Invoked.");
             _fba.CopyTo(s);
-            Console.WriteLine("CopyTo finished.");
+            _logger.DebugExt(()=>"CopyTo finished.");
         }
 
         public void Swap(in int index1, in int index2)
         {
-            Console.WriteLine($"Swap Invoked. Indexes: {index1} <-> {index2}");
+            _logger.DebugExt(()=>"Swap Invoked. Indexes: {index1} <-> {index2}");
             int offset1 = Offsets[index1];
             int len1 = Lengths[index1];
 
             int offset2 = Offsets[index2];
             int len2 = Lengths[index2];
 
-            Console.WriteLine($"Swap. Indexes: {index1} <-> {index2}, found lengths: {len1} <-> {len2}");
+            _logger.DebugExt(()=>"Swap. Indexes: {index1} <-> {index2}, found lengths: {len1} <-> {len2}");
             _fba.Swap(offset1, len1, offset2, len2);
             
             // Invalidate offsets/lengths only if we shifted some blocks.
-            // This inly happens when the sizes mismatch.
+            // This only happens when the sizes mismatch.
             if (len1 != len2)
             {
                 _version++;
             }
-            Console.WriteLine($"Swap finished. Indexes: {index1} <-> {index2}, lengths: {len1} <-> {len2}, New Collection Version: {_version}");
+            _logger.DebugExt(()=>"Swap finished. Indexes: {index1} <-> {index2}, lengths: {len1} <-> {len2}, New Collection Version: {_version}");
         }
     }
 }
