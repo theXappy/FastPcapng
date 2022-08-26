@@ -107,6 +107,8 @@ namespace FastPcapng
         /// <returns>Parsed packet block with a copy of the packet's data. Modifying this object doesn't affect the original data in the capture.</returns>
         public EnhancedPacketBlock GetPacket(int index) => _enhancedPacketBlocksBytes.GetBlockParsed(index);
 
+        public IEnumerable<EnhancedPacketBlock> EnumeratePackets() => _enhancedPacketBlocksBytes.EnumerateParsedBlock();
+
         /// <summary>
         /// Write the complete pcapng file to an output stream
         /// </summary>

@@ -122,6 +122,12 @@ namespace FastPcapng.Internal
             return epb;
         }
 
+        public IEnumerable<EnhancedPacketBlock> EnumerateParsedBlock()
+        {
+            for(int i=0;i<Count;i++)
+                yield return GetBlockParsed(i);
+        }
+
         public void Update(int index, EnhancedPacketBlock newEpb)
         {
             _logger.DebugExt(()=>$"Update Invoked. Index: {index}.");
