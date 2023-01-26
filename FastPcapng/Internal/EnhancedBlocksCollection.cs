@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using FastPcapng.DataBending;
 using Haukcode.PcapngUtils.PcapNG.BlockTypes;
@@ -98,6 +100,12 @@ namespace FastPcapng.Internal
         public (BaseBlock.Types type, uint length, byte[] body) GetBlockPartialParsed(int index)
         {
             _logger.DebugExt(()=>$"GetBlockPartialParsed Invoked. Index: {index}.");
+            if (index < 0)
+                throw new Exception($"Packet index can't be negative. Got: {index}");
+            if (index >= Offsets.Count)
+            {
+                throw new Exception($"Packet index out of bounds. Got: {index}, collection size was {Offsets.Count}");
+            }
             int offset = Offsets[index];
             int len = Lengths[index];
 

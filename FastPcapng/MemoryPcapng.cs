@@ -38,7 +38,7 @@ namespace FastPcapng
             _interfaceDescriptionBlocks = new List<InterfaceDescriptionBlock>()
             {
                 new InterfaceDescriptionBlock(LinkTypes.Ethernet, 65535,
-                    new InterfaceDescriptionOption("Fake interface 0"))
+                    new InterfaceDescriptionOption(Name: "Fake interface 0"))
             };
 
             EnhancedPacketBlock dummyPacket = new EnhancedPacketBlock(0, new TimestampHelper(0, 0), 1,
